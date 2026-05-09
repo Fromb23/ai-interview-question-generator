@@ -213,28 +213,22 @@ export default function Home() {
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-50 sm:px-6 sm:py-10 lg:px-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl shadow-slate-950/30 sm:p-8">
-          <div className="space-y-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300">
-              AI Interview Assistant
+          <div className="space-y-3">
+            <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Interview Question Generator
+            </h1>
+
+            <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+              Enter a job title and generate three role-specific interview
+              questions.
             </p>
 
-            <div className="space-y-3">
-              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                Generate sharper interview questions for any role.
-              </h1>
-
-              <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-                Enter a role title and get up to three focused interview prompts
-                that feel ready to use in a real screening conversation.
-              </p>
-            </div>
-
             <p className="text-sm leading-6 text-slate-400">
-              Powered by DeepSeek API through a server-side Next.js route.
+              Powered by DeepSeek through a server-side Next.js API route.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="space-y-2">
               <label
                 htmlFor="jobTitle"
@@ -244,7 +238,7 @@ export default function Home() {
               </label>
 
               <p className="text-sm leading-6 text-slate-400">
-                Start with Customer Success Manager or replace it with any role.
+                Example: Customer Success Manager
               </p>
             </div>
 
