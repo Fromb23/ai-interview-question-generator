@@ -1,35 +1,24 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
-const deepseek = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com",
-});
+function createDeepSeekClient() {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
 
-function sanitizeQuestions(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
+  if (!apiKey) {
+    throw new Error("DEEPSEEK_API_KEY is not configured.");
   }
 
-  return value
-    .filter((item): item is string => typeof item === "string")
-    .map((question) => question.trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://api.deepseek.com",
+  });
 }
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.DEEPSEEK_API_KEY) {
-      return NextResponse.json(
-        { error: "DeepSeek API key is not configured." },
-        { status: 500 }
-      );
-    }
-
     const body = await request.json();
-    const rawJobTitle = typeof body.jobTitle === "string" ? body.jobTitle : "";
-    const jobTitle = rawJobTitle.trim();
+    const jobTitle =
+      typeof body.jobTitle === "string" ? body.jobTitle.trim() : "";
 
     if (!jobTitle) {
       return NextResponse.json(
@@ -37,6 +26,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const deepseek = createDeepSeekClient();
 
     const completion = await deepseek.chat.completions.create({
       model: "deepseek-chat",
@@ -46,13 +37,9 @@ export async function POST(request: Request) {
           role: "system",
           content: [
             "You are an expert hiring interviewer.",
-            "Generate exactly 3 thoughtful interview questions for the provided job title or title-like input.",
-            "If the input is ambiguous, unusual, whimsical, or not clearly a real job title, infer the closest plausible professional role and still produce grounded, practical interview questions.",
-            "Do not produce nonsense, jokes, or fantasy scenarios.",
-            "The questions should be specific to the inferred or stated role, practical, and useful for evaluating real job readiness.",
+            "Generate exactly 3 thoughtful interview questions for the provided job title.",
+            "The questions should be specific to the role, practical, and useful for evaluating real job readiness.",
             "Do not ask for private personal information.",
-            "Do not ask for names, phone numbers, addresses, resumes, government identifiers, dates of birth, or any other personal identifiers.",
-            "Do not mention the inference process or add explanations outside the questions.",
             "Return only a JSON array of strings.",
           ].join(" "),
         },
@@ -75,25 +62,26 @@ export async function POST(request: Request) {
     let questions: string[];
 
     try {
-      questions = sanitizeQuestions(JSON.parse(rawContent));
+      questions = JSON.parse(rawContent);
     } catch {
       questions = rawContent
         .split("\n")
         .map((line) => line.replace(/^\d+[\).]\s*/, "").trim())
-        .filter(Boolean)
-        .slice(0, 3);
+        .filter(Boolean);
     }
 
     return NextResponse.json({
       jobTitle,
-      questions,
+      questions: questions.filter(Boolean).slice(0, 3),
     });
   } catch (error) {
     console.error("Failed to generate questions:", error);
 
-    return NextResponse.json(
-      { error: "Failed to generate interview questions." },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error && error.message.includes("DEEPSEEK_API_KEY")
+        ? "AI provider is not configured."
+        : "Failed to generate interview questions.";
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
