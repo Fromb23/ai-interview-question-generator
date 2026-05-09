@@ -61,7 +61,7 @@ Create a local environment file:
 DEEPSEEK_API_KEY=your_api_key_here
 ```
 
-Use `.env.local` for local development and do not commit it.
+Use `.env` for local development and do not commit it.
 
 ## Local Setup
 
