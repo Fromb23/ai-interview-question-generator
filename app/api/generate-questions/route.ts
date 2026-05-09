@@ -6,6 +6,18 @@ const deepseek = new OpenAI({
   baseURL: "https://api.deepseek.com",
 });
 
+function sanitizeQuestions(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((question) => question.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
 export async function POST(request: Request) {
   try {
     if (!process.env.DEEPSEEK_API_KEY) {
@@ -16,7 +28,8 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const jobTitle = body.jobTitle?.trim();
+    const rawJobTitle = typeof body.jobTitle === "string" ? body.jobTitle : "";
+    const jobTitle = rawJobTitle.trim();
 
     if (!jobTitle) {
       return NextResponse.json(
@@ -33,9 +46,13 @@ export async function POST(request: Request) {
           role: "system",
           content: [
             "You are an expert hiring interviewer.",
-            "Generate exactly 3 thoughtful interview questions for the provided job title.",
-            "The questions should be specific to the role, practical, and useful for evaluating real job readiness.",
+            "Generate exactly 3 thoughtful interview questions for the provided job title or title-like input.",
+            "If the input is ambiguous, unusual, whimsical, or not clearly a real job title, infer the closest plausible professional role and still produce grounded, practical interview questions.",
+            "Do not produce nonsense, jokes, or fantasy scenarios.",
+            "The questions should be specific to the inferred or stated role, practical, and useful for evaluating real job readiness.",
             "Do not ask for private personal information.",
+            "Do not ask for names, phone numbers, addresses, resumes, government identifiers, dates of birth, or any other personal identifiers.",
+            "Do not mention the inference process or add explanations outside the questions.",
             "Return only a JSON array of strings.",
           ].join(" "),
         },
@@ -58,17 +75,18 @@ export async function POST(request: Request) {
     let questions: string[];
 
     try {
-      questions = JSON.parse(rawContent);
+      questions = sanitizeQuestions(JSON.parse(rawContent));
     } catch {
       questions = rawContent
         .split("\n")
         .map((line) => line.replace(/^\d+[\).]\s*/, "").trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .slice(0, 3);
     }
 
     return NextResponse.json({
       jobTitle,
-      questions: questions.slice(0, 3),
+      questions,
     });
   } catch (error) {
     console.error("Failed to generate questions:", error);
